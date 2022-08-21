@@ -110,6 +110,7 @@ class MoveProjectsService(val project: Project) : Disposable {
                 }
             }
         }
+        // println(moveProject == null)
         this.projectsIndex.put(file, IndexEntry.Present(moveProject))
         return moveProject
     }

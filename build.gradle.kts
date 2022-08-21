@@ -4,7 +4,7 @@ import org.jetbrains.intellij.tasks.RunPluginVerifierTask
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import java.util.*
 
-val propsVersion = System.getenv("GRADLE_PROPS_VERSION") ?: "212"
+val propsVersion = System.getenv("GRADLE_PROPS_VERSION") ?: "221"
 val publishingToken = System.getenv("JB_PUB_TOKEN") ?: null
 
 val baseProperties = "base-gradle.properties"
@@ -16,7 +16,7 @@ file(properties).inputStream().let { props.load(it) }
 
 fun prop(key: String): String = props[key].toString()
 
-//val intellijVersion = prop("intellijVersion", "2021.2")
+// val intellijVersion = prop("intellijVersion", "2021.2")
 val kotlinVersion = "1.6.21"
 
 val pluginJarName = "intellij-move-$propsVersion"
@@ -31,6 +31,9 @@ plugins {
     kotlin("jvm") version "1.6.21"
     id("org.jetbrains.intellij") version "1.5.2"
     id("org.jetbrains.grammarkit") version "2021.2.2"
+    kotlin("plugin.serialization") version "1.6.21"
+
+
 }
 
 dependencies {
@@ -40,6 +43,10 @@ dependencies {
     // https://mvnrepository.com/artifact/org.yaml/snakeyaml
     implementation("org.yaml:snakeyaml:1.30")
     testImplementation("org.jetbrains.kotlin:kotlin-stdlib-jdk7")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.3.3")
+// https://mvnrepository.com/artifact/com.jayou/OkReflect
+    implementation("com.jayou:OkReflect:0.0.1")
+
 }
 
 allprojects {
@@ -52,6 +59,7 @@ allprojects {
     repositories {
         mavenCentral()
         maven("https://cache-redirector.jetbrains.com/intellij-dependencies")
+        maven("https://jcenter.bintray.com")
     }
 
     intellij {
@@ -164,10 +172,10 @@ allprojects {
             jbrVersion.set("11_0_9_1b1202.1")
         }
 
-        withType<org.jetbrains.intellij.tasks.RunIdeTask> {
-            jbrVersion.set("11_0_9_1b1202.1")
-            ideDir.set(File("/snap/clion/current"))
-        }
+//        withType<org.jetbrains.intellij.tasks.RunIdeTask> {
+//            jbrVersion.set("11_0_9_1b1202.1")
+//            ideDir.set(File("/snap/clion/current"))
+//        }
     }
 }
 

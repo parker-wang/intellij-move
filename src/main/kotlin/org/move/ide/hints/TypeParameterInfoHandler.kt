@@ -1,15 +1,18 @@
 package org.move.ide.hints
 
+import com.esotericsoftware.minlog.Log
 import com.intellij.lang.parameterInfo.CreateParameterInfoContext
 import com.intellij.lang.parameterInfo.ParameterInfoUIContext
 import com.intellij.lang.parameterInfo.ParameterInfoUtils
 import com.intellij.lang.parameterInfo.UpdateParameterInfoContext
+import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiFile
 import org.move.lang.MvElementTypes
 import org.move.lang.core.psi.*
 import org.move.lang.core.psi.ext.ancestorStrict
 import org.move.utils.AsyncParameterInfoHandler
+private val LOG = logger<TypeParameterInfoHandler>()
 
 class TypeParameterInfoHandler :
     AsyncParameterInfoHandler<MvTypeArgumentList, TypeParamsDescription>() {
@@ -17,6 +20,10 @@ class TypeParameterInfoHandler :
         file.findElementAt(offset)?.ancestorStrict()
 
     override fun calculateParameterInfo(element: MvTypeArgumentList): Array<TypeParamsDescription>? {
+        LOG.info("calculateParameterInfo: $element")
+        element.typeArgumentList.forEach(
+            { LOG.info("typeArgument: $it") }
+        )
         val owner =
             (element.parent as? MvPath)
                 ?.reference?.resolve() ?: return null
@@ -25,6 +32,7 @@ class TypeParameterInfoHandler :
     }
 
     override fun showParameterInfo(element: MvTypeArgumentList, context: CreateParameterInfoContext) {
+        Log.info("showParameterInfo: ${context.toString()}")
         context.highlightedElement = null
         super.showParameterInfo(element, context)
     }
@@ -33,6 +41,7 @@ class TypeParameterInfoHandler :
         parameterOwner: MvTypeArgumentList,
         context: UpdateParameterInfoContext,
     ) {
+        println("type updateParameterInfo")
         if (context.parameterOwner != parameterOwner) {
             context.removeHint()
             return
@@ -47,6 +56,7 @@ class TypeParameterInfoHandler :
     }
 
     override fun updateUI(p: TypeParamsDescription, context: ParameterInfoUIContext) {
+        println("type updateUI")
         context.setupUIComponentPresentation(
             p.presentText,
             p.getRange(context.currentParameterIndex).startOffset,
@@ -74,11 +84,13 @@ class TypeParamsDescription(
  * Calculates the text representation and ranges for parameters
  */
 private fun typeParamsDescription(params: List<MvTypeParameter>): TypeParamsDescription {
+
     val parts = params.map {
         val name = it.name ?: "_"
         val bound = it.typeParamBound?.text ?: ""
         name + bound
     }
+    println("TypeParameterInfoHandler ${parts}")
     val presentText = if (parts.isEmpty()) "<no arguments>" else parts.joinToString(", ")
     return TypeParamsDescription(
         presentText,

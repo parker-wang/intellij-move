@@ -342,5 +342,16 @@
         <action id="Move.RefreshAllProjects"
                 class="org.move.ide.actions.RefreshMvProjectsAction"
                 icon="AllIcons.Actions.Refresh"/>
+        <action id="SavePsi" class="org.move.psi.SavePsiFile" text="Save Current file" description="Save">
+            <add-to-group group-id="ToolsMenu" anchor="first"/>
+        </action>
+        <action id="ResourceTest" class="org.move.psi.ResouceTest" text="Test for Resource"
+                description="Resouce Debug ">
+            <add-to-group group-id="ToolsMenu" anchor="first"/>
+        </action>
+        <action id="HandleDepend" class="org.move.psi.HandleDepend" text="HandleDepend"
+                description="before handle current project ,we should handle dependencies">
+            <add-to-group group-id="ToolsMenu" anchor="first"/>
+        </action>
     </actions>
 </idea-plugin>

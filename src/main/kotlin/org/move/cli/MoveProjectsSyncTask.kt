@@ -9,6 +9,7 @@ import org.move.cli.manifest.MoveToml
 import org.move.cli.manifest.TomlDependency
 import org.move.lang.toNioPathOrNull
 import org.move.lang.toTomlFile
+import org.move.openapiext.contentRoot
 import org.move.openapiext.contentRoots
 import org.move.openapiext.resolveExisting
 import org.move.openapiext.toVirtualFile
@@ -41,27 +42,30 @@ class MoveProjectsSyncTask(
 
         fun loadProjects(project: Project): List<MoveProject> {
             val projects = mutableListOf<MoveProject>()
+           println("Loading project ${project.contentRoot}")
+           project.contentRoots.forEach {
+               println("dsad ${it.path}")
+           }
             for (contentRoot in project.contentRoots) {
                 contentRoot.iterateFiles({ it.name == Consts.MANIFEST_FILE }) {
                     val rawDepQueue = ArrayDeque<Pair<TomlDependency, RawAddressMap>>()
                     val root = it.parent?.toNioPathOrNull() ?: return@iterateFiles true
                     val tomlFile = it.toTomlFile(project) ?: return@iterateFiles true
-
                     val moveToml = MoveToml.fromTomlFile(tomlFile, root)
                     rawDepQueue.addAll(moveToml.deps)
-
                     val rootPackage = MovePackage.fromMoveToml(moveToml) ?: return@iterateFiles true
-
                     val deps = mutableListOf<Pair<MovePackage, RawAddressMap>>()
                     val visitedDepIds = mutableSetOf(
                         DepId(rootPackage.contentRoot.path, null)
                     )
                     loadDependencies(project, moveToml, deps, visitedDepIds)
-
                     projects.add(MoveProject(project, rootPackage, deps))
+                    
+
                     true
                 }
             }
+
             return projects
         }
 

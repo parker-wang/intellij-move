@@ -29,12 +29,14 @@ class MoveProjectOpenProcessor : ProjectOpenProcessor() {
         projectToClose: Project?,
         forceOpenInNewFrame: Boolean,
     ): Project? {
+        // println("doOpenProject: $virtualFile")
         val platformOpenProcessor = PlatformProjectOpenProcessor.getInstance()
         return platformOpenProcessor.doOpenProject(
             virtualFile,
             projectToClose,
             forceOpenInNewFrame
         )?.also {
+            // println(" platformOpenProcessor.doOpenProject :${it.isInitialized}")
             StartupManager.getInstance(it).runAfterOpened {
                 // create default build configuration if it doesn't exist
                 if (it.aptosBuildRunConfigurations().isEmpty()) {

@@ -18,6 +18,7 @@ class StructLitFieldsInfoHandler :
     AsyncParameterInfoHandler<MvStructLitFieldsBlock, FieldsDescription>() {
 
     override fun findTargetElement(file: PsiFile, offset: Int): MvStructLitFieldsBlock? {
+        println("struct findTargetElement")
         val element = file.findElementAt(offset) ?: return null
 //        val block = element.ancestorStrict<MvStructLitFieldsBlock>() ?: return null
         //        val callExpr = element.ancestorStrict<MvCallArgumentList>()
@@ -32,6 +33,7 @@ class StructLitFieldsInfoHandler :
         block: MvStructLitFieldsBlock,
         context: UpdateParameterInfoContext
     ) {
+        println("updateParameterInfo")
         if (context.parameterOwner != block) {
             context.removeHint()
             return
@@ -41,6 +43,7 @@ class StructLitFieldsInfoHandler :
     }
 
     override fun updateUI(description: FieldsDescription, context: ParameterInfoUIContext) {
+        println("updateUI")
         val range = description.getArgumentRange(context.currentParameterIndex)
         context.setupUIComponentPresentation(
             description.presentText,
@@ -57,6 +60,7 @@ class StructLitFieldsInfoHandler :
         block: MvStructLitFieldsBlock,
         context: UpdateParameterInfoContext
     ): Int {
+        println("findParameterIndex")
         if (block.startOffset == context.offset) return -1
         var elementAtOffset = context.file.findElementAt(context.offset) ?: return -1
 
