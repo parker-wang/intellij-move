@@ -29,29 +29,10 @@ class FunUtil {
             targetFun: MvFunction,
             currentResolveResult: MutableMap<String, List<Ops>>,
         ): MutableList<String> {
-            /**
-             *  when (stmt) {
-            is MvApplySchemaStmt -> {}
-            is MvExprStmt -> {}
-            is MvFriendStmt -> {}
-            is MvGlobalVariableSpecStmt -> {}
-            is MvIncludeStmt -> {}
-            is MvLetStmt -> {}
-            is MvLocalVariableSpecStmt -> {}
-            is MvPragmaSpecStmt -> {}
-            is MvSchemaFieldStmt -> {}
-            is MvSpecExprStmt -> {}
-            is MvSpecInlineFunctionStmt -> {}
-            is MvUseStmt -> {}
-
-            }
-             */
-//            var ops: MutableMap<Pair<String, Int>, String> = mutableMapOf()
 // 记录函数操作序列的
             var ops: MutableList<Ops> = mutableListOf()
 //            解析所有语句
 //            语句分4种1.let 2 调用 3赋值语句 4返回
-//             var funopts: MutableMap<String, MutableList<Ops>> = mutableMapOf()
             val stmtlist = targetFun.codeBlock!!.stmtList
             val childrenArray = targetFun.codeBlock!!.children
             for (item in childrenArray.indices) {
@@ -81,39 +62,8 @@ class FunUtil {
                                 }
 
                             }
-
-
-                            // if (expr is MvCallExpr) {
-                            //     println("expr ${expr.text}")
-                            //     val path = expr.path
-                            //     println("ppp ${path.text}")
-                            //     val funcItem = path.reference?.resolve() as? MvFunctionLike?
-                            //     println(" fun item ${funcItem?.name}")
-                            //
-                            // }
-                            // getFunReference(expr)
-
-                            // AssignmentExpr
-                            // | SpecVisRestrictedExpr
-                            // | RangeExpr
-                            // | (ForallQuantExpr | ExistsQuantExpr | ChooseQuantExpr)
-                            // | ImplyOperatorsExpr_items
-                            // | OrExpr
-                            // | AndExpr
-                            // | LogicalEqExprItem
-                            // | BitOrExpr
-                            // | BitXorExpr
-                            // | BitAndExpr
-                            // | (LeftShiftExpr | RightShiftExpr)
-                            // | AddExprItem
-                            // | MulExprItem
-                            // | ControlFlowExpr
-                            // | CastExpr
-                            // | UnaryExpr
-                            // | BorrowExpr
-                            // | AtomExpr
-
                         }
+
                         is MvExprStmt -> {
                             var funcalllist = LinkedHashSet<Ops>()
                             val expr = (childrenArray[item] as MvExprStmt).expr
@@ -151,24 +101,6 @@ class FunUtil {
             }
             // 遍历所有语句后将语句添加至现存函数操作列表中
             currentResolveResult.put(targetFun.nameElement?.text!!, ops?.toList())
-//
-
-
-//                println("callinfo ${targetFun.callInfo.toString()}")
-//                println("callinfo name ${targetFun.callInfo?.name}")
-//                println("callinfo param ${targetFun.callInfo?.parameters}")
-//                val paramlist = targetFun.parameters
-//                for (param in paramlist) {
-//                    println("out param:" + param.toString())
-//                    println("out param bindingPat:" + param.bindingPat.name)
-//                    val ty = param.typeAnnotation?.type
-//                    println("ty :${ty}")
-////                    val tyo=param.typeAnnotation.
-////                    println("out param type:"+param.typeAnnotation?.type.toString())
-////                    println("out param type:"+param.typeAnnotation?.type?.context.toString())
-//
-//                }
-//            if (targetFun.functionVisibilityModifier?.text?.indexOf("public") != -1) {
 
             val ac = targetFun.acquiresType?.pathTypeList
             return mutableListOf()

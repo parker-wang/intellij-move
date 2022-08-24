@@ -31,6 +31,7 @@ import com.jetbrains.rd.util.string.printToString
 import org.move.cli.Consts
 import org.move.cli.MoveProject
 import org.move.cli.MoveProjectsService
+import org.move.cli.manifest.TomlDependency
 import org.move.cli.runconfig.AptosCommandConfiguration
 import org.move.cli.runconfig.AptosCommandConfigurationType
 import org.move.ide.inspections.pathUsageMap
@@ -79,7 +80,6 @@ class ResouceTest : AnAction() {
         } else {
             println("Windows")
         }
-//        ApplicationManager.getApplication().serviceIfCreated<MoveProjectsService>()
         var service = project.serviceIfCreated<MoveProjectsService>()
         println(service?.allProjects?.size)
         if (service != null) {
@@ -94,9 +94,21 @@ class ResouceTest : AnAction() {
         val jsonpath = myDialogData.JsonPath
         println("jj:$jsonpath")
         // 如果json没有，那就从toml开始解析
-        if(jsonpath.length<1){
+        var mvpackages = mutableListOf<TomlDependency>()
+        moveProjects.forEach {
+            it.movePackages().elementAt(0).moveToml.deps.forEach {
+                mvpackages.add(it.first)
+            }
 
         }
+        //如果json中没有包含该项目的mvpackage，那就从递归找到最开始没有被解析的项目，这样层层嵌套，保证在解析当前项目时
+        // 前面的依赖也已经解析结束。，具体思路时建一张图，找路径然后类比之前的实现前置依赖的加载。
+        //1.第一步从当前目录开始建图
+
+
+
+
+
 
 
 
@@ -105,7 +117,6 @@ class ResouceTest : AnAction() {
 
 
         for (item in moveProjects) {
-            val searchScope = item.searchScope()
 
 
             val mp = item.movePackages()
@@ -116,6 +127,7 @@ class ResouceTest : AnAction() {
                 "dep " +
                         " size ${deps.size}"
             )
+
             deps.forEach {
                 println("dep ${it}")
                 println("dep first ${it.first}")
@@ -125,11 +137,11 @@ class ResouceTest : AnAction() {
                 it.first.name
             }).toList()
             println("externalDep $externalDep")
-            if(jsonpath.length<1){
+            if (jsonpath.length < 1) {
                 deps.forEach {
                     println("dep ${it}")
                     println("dep first ${it.first}")
-                    val exdep=it.first
+                    val exdep = it.first
                     println(exdep.name)
 
                     val localPath = exdep.localPath()
