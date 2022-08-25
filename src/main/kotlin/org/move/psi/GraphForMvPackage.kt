@@ -14,28 +14,60 @@ import org.move.openapiext.modules
 import org.move.stdext.iterateFiles
 
 class GraphForMvPackage {
-    fun gerResult(map: LinkedHashMap<String, List<TomlDependency>>){
-        val arr=Array<Array<Int>>(map.size){Array(map.size){0}}
-       map.toList().forEachIndexed { index, (key, value) ->
-           value.forEach {
-               val index2=map.keys.indexOf(it.name)
-               if(index2!=-1){
-                   arr[index][index2]=1
-               }
-           }
-       }
-        for (i in 0 until map.size) {
-            for (j in 0 until map.size) {
-                if (arr[i][j] == 1) {
-                    println("$i $j")
+    fun gerResult(map: LinkedHashMap<String, List<TomlDependency>>) {
+        val arr = Array<Array<Int>>(map.size) { Array(map.size) { 0 } }
+        map.toList().forEachIndexed { index, (key, value) ->
+            value.forEach {
+                val index2 = map.keys.indexOf(it.name)
+                if (index2 != -1) {
+                    arr[index][index2] = 1
+                }
+            }
+        }
+        var startNode = mutableListOf<Int>()
+        var endNode = mutableListOf<Int>()
+        for (node in 0 until arr.size) {
+            var isStart = true
+            for (i in 0 until arr.size) {
+                if (arr[i][node] == 1) {
+                    isStart = false
+                    break
+                }
+            }
+            var isEnd = true
+            for (i in 0 until arr.size) {
+                if (arr[node][i] == 1) {
+                    isEnd = false
+                    break
+                }
+            }
+            if (isStart) {
+                startNode.add(node)
+            }
+            if (isEnd) {
+                endNode.add(node)
+            }
+        }
+        var pathDfs = PathDfs(arr)
+        var pathSum = mutableListOf<Int>()
+        for (i in startNode) {
+            for (j in endNode) {
+                val findAllPath = pathDfs.findAllPath(i, j)
+                for (item in findAllPath) {
+                    item.reverse()
+                    item.forEach {
+                        if (!pathSum.contains(it))
+                            pathSum.add(it)
+                    }
                 }
             }
         }
 
-       }
+    }
+
     fun buildGraph(
         toml: MoveToml, currProject: String,
-        map:LinkedHashMap <String, List<TomlDependency>>,
+        map: LinkedHashMap<String, List<TomlDependency>>,
     ) {
         val deps = toml.deps
 
