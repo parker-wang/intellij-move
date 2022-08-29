@@ -8,46 +8,45 @@ import com.intellij.execution.RunnerAndConfigurationSettings
 import com.intellij.execution.executors.DefaultRunExecutor
 import com.intellij.execution.executors.DefaultRunExecutor.EXECUTOR_ID
 import com.intellij.execution.runners.ProgramRunner
-import com.intellij.find.FindManager
-import com.intellij.find.impl.FindManagerImpl
-import com.intellij.lang.LanguageMatcher
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.components.serviceIfCreated
-import com.intellij.openapi.fileChooser.FileChooserDescriptor
-import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.psi.PsiElement
-import com.intellij.psi.search.GlobalSearchScope
-import com.intellij.psi.search.PsiSearchScopeUtil.restrictScopeToFileLanguage
 import com.intellij.ui.dsl.builder.RightGap
 import com.intellij.ui.dsl.builder.bindText
 import com.intellij.ui.dsl.builder.panel
 import com.intellij.ui.dsl.builder.selected
-import com.jetbrains.rd.util.reflection.usingTrueFlag
 import com.jetbrains.rd.util.string.printToString
+import com.jetbrains.rd.util.string.println
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
 import org.move.cli.Consts
 import org.move.cli.MoveProject
 import org.move.cli.MoveProjectsService
+import org.move.cli.manifest.MoveToml
 import org.move.cli.manifest.TomlDependency
 import org.move.cli.runconfig.AptosCommandConfiguration
 import org.move.cli.runconfig.AptosCommandConfigurationType
-import org.move.ide.inspections.pathUsageMap
-import org.move.ide.utils.callInfo
-import org.move.lang.core.psi.*
+import org.move.lang.MoveFile
+import org.move.lang.core.psi.MvElement
+import org.move.lang.core.psi.MvFunction
+import org.move.lang.core.psi.MvModule
+import org.move.lang.core.psi.containingFunction
+import org.move.lang.core.psi.ext.allFunctions
 import org.move.lang.core.psi.ext.fqName
-import org.move.lang.core.resolve.ref.MvPathReference
+import org.move.lang.core.psi.usages
 import org.move.lang.isMoveFile
 import org.move.lang.modules
 import org.move.lang.toMoveFile
-import org.move.openapiext.root
 import org.move.openapiext.toPsiFile
 import org.move.openapiext.toVirtualFile
 import org.move.psi.FunUtil.Companion.findFunction
 import org.move.stdext.toPath
 import org.toml.lang.psi.TomlFile
+import java.io.File
+import java.nio.charset.Charset
 import java.nio.file.Path
 import java.util.*
 import javax.swing.JComponent
@@ -92,96 +91,208 @@ class ResouceTest : AnAction() {
         var dialog = CurrentResult(myDialogData)
         dialog.show()
         val jsonpath = myDialogData.JsonPath
+        val boolean = File(jsonpath).isFile && File(jsonpath).extension == "json"
+
         println("jj:$jsonpath")
         // 如果json没有，那就从toml开始解析
         var mvpackages = mutableListOf<TomlDependency>()
-        moveProjects.forEach {
-            it.movePackages().elementAt(0).moveToml.deps.forEach {
-                mvpackages.add(it.first)
+        if (!boolean) {
+            val finalMoveProjects= mutableListOf<MoveProject>()
+            moveProjects.forEach { it ->
+                it.movePackages().elementAt(0).moveToml.deps.forEach {
+                    mvpackages.add(it.first)
+                }
+                val tomlfile =
+                    it.contentRootPath?.resolve(Consts.MANIFEST_FILE)?.toVirtualFile()?.toPsiFile(project) as TomlFile
+                val moveToml = MoveToml.fromTomlFile(tomlfile, it.contentRootPath!!)
+                val mpmap = LinkedHashMap<String, List<TomlDependency>>()
+                val gmp = GraphForMvPackage()
+                gmp.buildGraph(moveToml, it.project.name, mpmap)
+                val gerResult = gmp.gerResult(mpmap)
+
+
+
             }
 
+
+            // val toml=
+
+
+        } else {
+            println("is json")
+            return
         }
-        //如果json中没有包含该项目的mvpackage，那就从递归找到最开始没有被解析的项目，这样层层嵌套，保证在解析当前项目时
+
+        // 如果json中没有包含该项目的mvpackage，那就从递归找到最开始没有被解析的项目，这样层层嵌套，保证在解析当前项目时
         // 前面的依赖也已经解析结束。，具体思路时建一张图，找路径然后类比之前的实现前置依赖的加载。
-        //1.第一步从当前目录开始建图
+        // 1.第一步从当前目录开始建图
 
 
+//         for (item in moveProjects) {
+//
+//
+//             val mp = item.movePackages()
+//
+//             val elementAt = mp.elementAt(0)
+//             val deps = elementAt.moveToml.deps
+//
+//
+//             deps.forEach {
+//                 println("dep ${it}")
+//                 println("dep first ${it.first}")
+//                 println("deps second ${it.second}")
+//             }
+//             // 依赖
+//             val externalDep = (deps.map {
+//                 it.first.name
+//             }).toList()
+//
+//
+//             val sourcesFolder = elementAt.sourcesFolder
+//             var Res: MutableList<String> = mutableListOf()
+//             var FunInit: MutableList<RSGNode> = mutableListOf()
+//             var FunEnd: MutableList<RSGNode> = mutableListOf()
+//             var FunCom: MutableList<RSGNode> = mutableListOf()
+//             var FunOpts: MutableMap<String, MutableList<Ops>> = mutableMapOf()
+//             if (sourcesFolder?.isDirectory() == true) {
+//                 // 项目中模块
+//                 var modulesInProject = LinkedHashMap<String, String>()
+//                 // 获取所有模块
+//                 ergodic(modulesInProject, sourcesFolder, project, sourcesFolder.canonicalPath.toString())
+//                 var children = sourcesFolder.children
+//                 var graph: Array<Array<Int>> =
+//                     Array(modulesInProject.size, { Array(modulesInProject.size) { it -> -1 } })
+//                 children.forEachIndexed { index, virtualFile ->
+//                     if (virtualFile.isMoveFile) {
+//                         val moveFile = virtualFile.toMoveFile(project)
+//                         moveFile?.modules()?.forEach {
+//                             val from =
+//                                 modulesInProject.keys.indexOf((it.addressRef?.namedAddress?.text + it.addressRef?.nextSibling?.text + it.addressRef?.nextSibling?.nextSibling?.text).trim())
+//                             it.moduleBlock?.useStmtList?.forEach { useitem ->
+//                                 if (!externalDep.contains(useitem?.moduleUseSpeck?.fqModuleRef?.addressRef?.text)) {
+//                                     val to = modulesInProject.keys.indexOf(useitem?.moduleUseSpeck?.text)
+// //                                    调用者指向被调用者
+//                                     graph[from][to] = 1
+//                                 }
+//                             }
+//                         }
+//                     }
+//                 }
+//                 var startNode = mutableListOf<Int>()
+//                 var endNode = mutableListOf<Int>()
+//                 for (node in graph.indices) {
+//                     var isStart = true
+//                     for (i in graph.indices) {
+//                         if (graph[i][node] == 1) {
+//                             isStart = false
+//                             break
+//                         }
+//                     }
+//                     var isEnd = true
+//                     for (i in graph.indices) {
+//                         if (graph[node][i] == 1) {
+//                             isEnd = false
+//                             break
+//                         }
+//                     }
+//                     if (isStart) {
+//                         startNode.add(node)
+//                     }
+//                     if (isEnd) {
+//                         endNode.add(node)
+//                     }
+//                 }
+//                 var pathDfs = PathDfs(graph)
+//                 var pathSum = mutableListOf<Int>()
+//                 for (i in startNode) {
+//                     for (j in endNode) {
+//                         val findAllPath = pathDfs.findAllPath(i, j)
+//                         for (item in findAllPath) {
+//                             item.reverse()
+//                             item.forEach {
+//                                 if (!pathSum.contains(it))
+//                                     pathSum.add(it)
+//                             }
+//                         }
+//                     }
+//                 }
+//                 // 获得一个排好序的模块列表
+//                 val keys = modulesInProject.keys.toTypedArray()
+//                 for (index in pathSum) {
+//                     var targetVF = modulesInProject[keys[index]]
+//                     var (filpath, moduleindex) = targetVF!!.split("_")
+//                     filpath = sourcesFolder.canonicalPath.toString() + "/" + filpath
+//                     var vf = getTargetVirtualFile(sourcesFolder, filpath)
+//                     if (vf != null) {
+//                         val movefile = vf.toMoveFile(project)
+//                         // println("movefile ${movefile?.name}")
+// //                        val match = LanguageMatcher.match(movefile!!.language)
+//                         val module = movefile?.modules()?.toList()?.get(moduleindex.toInt())
+//                         module?.moduleBlock?.let {
+//                             it.structList.forEach() { st ->
+//                                 val abs = st.abilitiesList?.getAbilityList()
+//                                 for (ability in abs.orEmpty()) {
+//                                     if (ability.identifier?.getText().equals("key")) {
+//                                         Res.add(st.fqName)
+//                                     }
+//                                 }
+//                             }
+//                             println("res :${Res}")
+//                             if (it.functionList.size > 0) {
+//                                 val functionList = it.functionList
+//                                 val funSort = getFunSort(functionList, vf)
+//                                 // TODO("save dependency to initalize json")
+//
+//
+//                                 val currentResolveResult: MutableMap<String, List<Ops>> = mutableMapOf()
+//                                 for (index in funSort) {
+//                                     val targetFun = functionList[index]
+//                                     findFunction(Res, targetFun, currentResolveResult)
+//                                 }
+//                                 // println("current: ${currentResolveResult}")
+//
+//                             }
+//                         }
+//                     }
+//                 }
+//
+//             }
+//         }
 
 
+    }
 
-
-
-
-
-
-
-
-        for (item in moveProjects) {
-
-
-            val mp = item.movePackages()
+    private fun process(mp: MoveProject, path: Path) {
+        val content = path.toFile().inputStream().reader(Charset.defaultCharset()).readText()
+        val resOps = Json.decodeFromString<ResOps>(content)
+        val cuurrentProject = mp.project
+        if (resOps.projectName.contains(mp.currentPackage.packageName))
+            return
+        else {
+// 1.处理
+//             处理的话就是输入参数为MoveProject,以及一个Funs
+            val mp = mp.movePackages()
 
             val elementAt = mp.elementAt(0)
             val deps = elementAt.moveToml.deps
-            println(
-                "dep " +
-                        " size ${deps.size}"
-            )
-
-            deps.forEach {
-                println("dep ${it}")
-                println("dep first ${it.first}")
-                println("deps second ${it.second}")
-            }
+            // 依赖
             val externalDep = (deps.map {
                 it.first.name
             }).toList()
-            println("externalDep $externalDep")
-            if (jsonpath.length < 1) {
-                deps.forEach {
-                    println("dep ${it}")
-                    println("dep first ${it.first}")
-                    val exdep = it.first
-                    println(exdep.name)
-
-                    val localPath = exdep.localPath()
-
-                    println("deps second ${it.second}")
-
-                }
-            }
-//            println("elementAt ${elementAt.toString()}")
-//            println("toml:" + elementAt.moveToml.tomlFile)
-//            println("toml toString:" + elementAt.moveToml.tomlFile.toString())
-//            println("packageName:" + elementAt.moveToml.packageName)
-//            println("packageName toString:" + elementAt.moveToml.packageName.toString())
-//            println("deps toString:" + elementAt.moveToml.deps.toString())
-//            println("address toString:" + elementAt.moveToml.addresses.toString())
             val sourcesFolder = elementAt.sourcesFolder
-//            println("sourcesFolder ${sourcesFolder.toString()}")
             var Res: MutableList<String> = mutableListOf()
-//            var Res:MutableList<MvStruct> = mutableListOf()
-            var FunInit: MutableList<RSGNode> = mutableListOf()
-            var FunEnd: MutableList<RSGNode> = mutableListOf()
-            var FunCom: MutableList<RSGNode> = mutableListOf()
-            var FunOpts: MutableMap<String, MutableList<Ops>> = mutableMapOf()
-            println("sourcesFolder ${sourcesFolder.toString()}")
             if (sourcesFolder?.isDirectory() == true) {
+                // 项目中模块
                 var modulesInProject = LinkedHashMap<String, String>()
-                val txt = "file://"
-                println("substring:${sourcesFolder.canonicalPath.toString().substring(txt.length)}")
-                ergodic(modulesInProject, sourcesFolder, project, sourcesFolder.canonicalPath.toString())
-                println("modulesInProject $modulesInProject")
+                // 获取所有模块
+                ergodic(modulesInProject, sourcesFolder, cuurrentProject, sourcesFolder.canonicalPath.toString())
                 var children = sourcesFolder.children
-
                 var graph: Array<Array<Int>> =
                     Array(modulesInProject.size, { Array(modulesInProject.size) { it -> -1 } })
-
                 children.forEachIndexed { index, virtualFile ->
                     if (virtualFile.isMoveFile) {
-                        val moveFile = virtualFile.toMoveFile(project)
+                        val moveFile = virtualFile.toMoveFile(cuurrentProject)
                         moveFile?.modules()?.forEach {
-
                             val from =
                                 modulesInProject.keys.indexOf((it.addressRef?.namedAddress?.text + it.addressRef?.nextSibling?.text + it.addressRef?.nextSibling?.nextSibling?.text).trim())
                             it.moduleBlock?.useStmtList?.forEach { useitem ->
@@ -232,17 +343,19 @@ class ResouceTest : AnAction() {
                         }
                     }
                 }
+                // 获得一个排好序的模块列表
                 val keys = modulesInProject.keys.toTypedArray()
-                for (index in pathSum) {
-                    var targetVF = modulesInProject[keys[index]]
+                val mfs = mutableListOf<MvModule>()
+                pathSum.forEach { it ->
+                    var targetVF = modulesInProject[keys[it]]
                     var (filpath, moduleindex) = targetVF!!.split("_")
                     filpath = sourcesFolder.canonicalPath.toString() + "/" + filpath
                     var vf = getTargetVirtualFile(sourcesFolder, filpath)
                     if (vf != null) {
-                        val movefile = vf.toMoveFile(project)
-                        println("movefile ${movefile?.name}")
-//                        val match = LanguageMatcher.match(movefile!!.language)
+                        val movefile = vf.toMoveFile(cuurrentProject)
+
                         val module = movefile?.modules()?.toList()?.get(moduleindex.toInt())
+                        module?.let { mfs.add(it) }
                         module?.moduleBlock?.let {
                             it.structList.forEach() { st ->
                                 val abs = st.abilitiesList?.getAbilityList()
@@ -252,30 +365,23 @@ class ResouceTest : AnAction() {
                                     }
                                 }
                             }
-                            println("res :${Res}")
-                            if (it.functionList.size > 0) {
-                                val functionList = it.functionList
-                                val funSort = getFunSort(functionList, vf)
-                                // TODO("save dependency to initalize json")
-
-
-                                val currentResolveResult: MutableMap<String, List<Ops>> = mutableMapOf()
-                                for (index in funSort) {
-                                    val targetFun = functionList[index]
-                                    findFunction(Res, targetFun, currentResolveResult)
-                                }
-                                // println("current: ${currentResolveResult}")
-
-                            }
                         }
                     }
                 }
+                mfs.forEach {
+                    val file = it.containingFile.virtualFile
+                    val funSort = getFunSort(it.allFunctions(), file)
+                    val currentResolveResult: MutableMap<String, List<Ops>> = mutableMapOf()
+                    for (index in funSort) {
+                        val targetFun = it.allFunctions()[index]
+                        findFunction(Res, targetFun, currentResolveResult)
+                    }
 
-            } else {
+                }
 
+                // 2.转成json
             }
         }
-
 
     }
 
@@ -391,7 +497,7 @@ class ResouceTest : AnAction() {
     /**
      * 根据目标获取对应vf
      */
-    private fun getTargetVirtualFile(root: VirtualFile, target: String): VirtualFile? {
+    fun getTargetVirtualFile(root: VirtualFile, target: String): VirtualFile? {
         for (item in root.children) {
             if (!item.isDirectory) {
                 if (item.canonicalPath == target) {
@@ -411,7 +517,7 @@ class ResouceTest : AnAction() {
     /**
      * 遍历源码目录，获取模块名称
      */
-    private fun ergodic(modules: LinkedHashMap<String, String>, vf: VirtualFile, project: Project, path: String) {
+    fun ergodic(modules: LinkedHashMap<String, String>, vf: VirtualFile, project: Project, path: String) {
         if (vf.isDirectory) {
             vf.children.forEach {
                 ergodic(modules, it, project, path)
@@ -536,5 +642,12 @@ class PathDfs(val graph: Array<Array<Int>>) {
 
 }
 
-data class ReItem(val project: String, var res: MutableList<String>, val funOpsMaps: MutableMap<String, List<Ops>>)
-data class Result(val arr: MutableList<ReItem>)
+data class funitem(val fname: String, var ops: MutableList<Ops>)
+
+// data class Result(val arr: MutableList<ReItem>)
+data class ResOps(val projectName: MutableList<String>, val projects: MutableList<pitem>) {
+}
+
+data class pitem(val pname: String, val Funs: MutableList<funitem>) {
+
+}

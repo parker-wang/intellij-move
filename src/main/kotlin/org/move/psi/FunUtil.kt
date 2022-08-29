@@ -48,15 +48,11 @@ class FunUtil {
                                 inferExpr(expr, funcalllist)
                             }
                             if (funcalllist.size > 0) {
-                                funcalllist.forEach {
+                                funcalllist.forEach { it ->
                                     println("funcalllist item :${it.toString()}")
                                     if (currentResolveResult.containsKey(it.op))
                                         ops.addAll(currentResolveResult.get(it.op)!!.toMutableList().filter {
-                                            if (it.op.contains("builtins") && (it.op.contains("freeze"))) {
-                                                false
-
-                                            } else
-                                                true
+                                            !(it.op.contains("builtins") && (it.op.contains("freeze")))
                                         })
 
                                 }
@@ -70,27 +66,16 @@ class FunUtil {
                             // 获得所有函数调用，返回函数名
                             inferExpr(expr, funcalllist)
                             if (funcalllist.size > 0) {
-                                funcalllist.forEach {
+                                funcalllist.forEach { it ->
                                     if (currentResolveResult.containsKey(it.op))
                                         ops.addAll(currentResolveResult.get(it.op)!!.toMutableList().filter {
-                                            if (it.op.contains("builtins") && (it.op.contains("freeze"))) {
-                                                false
-
-                                            } else
-                                                true
+                                            !(it.op.contains("builtins") && (it.op.contains("freeze")))
                                         })
 
                                 }
 
                             }
-                            // val exprStmt = childrenArray[item] as MvExprStmt
-                            // val expr = exprStmt.expr
-                            // println("expr text: ${expr.text}")
-                            // println("expr msl ${expr.isMsl()}")
-                            // val fctx = InferenceContext(expr.isMsl())
-                            // for (param in this.parameterBindings) {
-                            //     fctx.bindingTypes[param] = param.cachedTy(fctx)
-                            // }
+
                         }
 
                         else -> {}
@@ -104,121 +89,6 @@ class FunUtil {
 
             val ac = targetFun.acquiresType?.pathTypeList
             return mutableListOf()
-//             if (ac != null && ac.size > 0) {
-//                 // this function is a acquire function,and need resource
-//                 val stmtlist = targetFun.codeBlock!!.stmtList
-//                 for (item in stmtlist.indices) {
-// //                            let 语句前面位bind后面位initalizer
-//                     if (stmtlist[item].text.indexOf("move_from") != -1) {
-//                         val mvletStmt = stmtlist[item]
-//                         if (mvletStmt is MvLetStmt) {
-// //                                    val bind=mvletStmt.pat.
-//                             val initializer = mvletStmt.initializer
-//                             val call = initializer?.expr.let {
-//                                 if (it is MvCallExpr) {
-//                                     it
-//                                 } else {
-//                                     null
-//                                 }
-//                             }
-//                             val pp = call?.path
-//                             val resolved = pp?.reference?.resolve() as? MvFunctionLike
-//                             if (resolved != null) {
-//                                 println("resolved:${resolved.text}")
-//                                 when (resolved) {
-//                                     is MvFunction -> {
-//                                         println("resolved is MvFunction")
-//                                     }
-//                                     is MvSpecFunction -> {
-//                                         println("resolved is MvSpecFunction")
-//                                     }
-//                                     else -> {
-//                                         println("resolved is null")
-//                                     }
-//                                 }
-//                             }
-//                             val testparaminfo = pp?.typeArgumentList
-//                             val owner =
-//                                 (testparaminfo?.parent as? MvPath)
-//                                     ?.reference?.resolve()
-//                             if (owner is MvTypeParametersOwner) {
-//                                 owner.typeParameters?.forEach {
-//                                     println("owner typeParameters:${it.text}")
-//                                 }
-// //                                        println("owner is MvTypeParametersOwner${owner.typeParameters.toString()}")
-//                                 val arrayOf = arrayOf(typeParamsDescription(owner.typeParameters))
-//                                 arrayOf.forEach {
-//                                     println("TypeParamsDescription :${it.presentText}")
-// //                                           println("${it.}")
-//
-//                                 }
-//                             }
-//
-//                             pp?.typeArgumentList?.typeArgumentList?.forEach {
-// //                                        val owner =
-// //                                            (element.parent as? MvPath)
-// //                                                ?.reference?.resolve() ?: return null
-// //                                        if (owner !is MvTypeParametersOwner) return null
-// //                                         arrayOf(typeParamsDescription(owner.typeParameters))
-//                                 println("typeArgumentList item:${it.text}")
-//                                 if (it.type is MvPathType) {
-//                                     println("typeArgumentList item is MvPathType")
-//                                     val tp = it?.type as MvPathType
-//                                     val mvStruct = tp.path.reference?.resolve() as? MvStruct?
-//                                     if (mvStruct != null) {
-//                                         println(mvStruct.canNavigateToSource())
-//                                         println("mvstruct moudle:${mvStruct.module.name}")
-//                                         println("mvstruct fieldNames:${mvStruct.fieldNames}")
-//                                         println("mvstruct fields:${mvStruct.fields}")
-//                                         println("mvStruct fqName:${mvStruct.fqName}")
-// //                                                mvStruct.ownDeclarations.
-//                                         val fieldParams =
-//                                             mvStruct.fieldsMap.entries.map { (name, field) ->
-//                                                 val type = field.declaredTy(false).fullname()
-//                                                 "$name: $type"
-//                                             }.toTypedArray()
-//                                         val filed =
-//                                             if (fieldParams.isEmpty()) "<no fields>" else fieldParams.joinToString(
-//                                                 ", "
-//                                             )
-//                                         filed.split(",").forEach {
-//                                             println(it)
-//                                         }
-//                                         println("typeArgumentList item is MvPathType mvStruct:${mvStruct.text}")
-//                                         mvStruct.abilities.forEach {
-//                                             println("typeArgumentList item is MvPathType mvStruct ability:${it.text}")
-//                                         }
-//                                     }
-//                                 }
-//
-//                             }
-//
-//                         }
-//                         if (mvletStmt is MvExprStmt) {
-//
-//                             println("yes")
-//                         }
-//
-//
-//                         ops.put(Pair(stmtlist[item].text, item), "res")
-// //                                ops.put(stmtlist[item].text, item)
-//                     } else if (stmtlist[item].text.indexOf("borrow_global") != -1) {
-// //                                ops.put(stmtlist[item].text, item)
-//                     } else if (stmtlist[item].text.indexOf("borrow_global_mut") != -1) {
-// //                                ops.put(stmtlist[item].text, item)
-//                     } else {
-//
-//                     }
-//
-//                 }
-//             } else {
-// //                        val paramlist = targetFun.parameters
-// //                        for (param in paramlist) {
-// //                            println("param:" + param.toString())
-// //                        }
-//             }
-
-
         }
 
         fun getFunReference(expr: MvExpr) {
