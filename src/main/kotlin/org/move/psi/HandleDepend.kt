@@ -13,6 +13,7 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.serviceIfCreated
 import com.intellij.openapi.module.Module
+import com.intellij.openapi.module.ModuleManager
 import com.intellij.openapi.options.newEditor.SettingsTreeView.prepareProject
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.project.Project
@@ -51,63 +52,16 @@ import org.move.stdext.iterateFiles
 
 class HandleDepend : AnAction() {
     override fun actionPerformed(e: AnActionEvent) {
-        //
-        var service = e.project?.serviceIfCreated<MoveProjectsService>()
-        val project = service?.project
-        project?.modules?.forEach { println("service project ${it.name}") }
-        val cpath = toCanonicalName("C:\\Users\\15061\\Documents\\sun\\test\\stacoin")
-        // ProjectManager.getInstanceIfCreated()
-        val loadProject = ProjectManagerEx.getInstanceEx().loadProject(cpath)
-        println(loadProject.basePath)
-        println(loadProject.workspaceFile?.path)
-        println(loadProject.isTrusted())
-        loadProject.wrapWithList().forEach {
-            println(it.name)
-        }
-        // loadProject.basePath
-        println(loadProject.modules.size)
-        loadProject.modules.forEach {
-            println(it.name)
-        }
-        val contentRoots = loadProject.modules.toList().asSequence()
-            .flatMap { ModuleRootManager.getInstance(it).contentRoots.asSequence() }
-        println("contentRoots ${contentRoots}")
-        val projects = mutableListOf<MoveProject>()
-        for (contentRoot in contentRoots) {
-            contentRoot.iterateFiles({ it.name == Consts.MANIFEST_FILE }) {
-                val rawDepQueue = ArrayDeque<Pair<TomlDependency, RawAddressMap>>()
-                val root = it.parent?.toNioPathOrNull() ?: return@iterateFiles true
-                val tomlFile = it.toTomlFile(loadProject) ?: return@iterateFiles true
-                val moveToml = MoveToml.fromTomlFile(tomlFile, root)
-                rawDepQueue.addAll(moveToml.deps)
-                val rootPackage = MovePackage.fromMoveToml(moveToml) ?: return@iterateFiles true
-                val deps = mutableListOf<Pair<MovePackage, RawAddressMap>>()
-                val visitedDepIds = mutableSetOf(
-                    DepId(rootPackage.contentRoot.path, null)
-                )
-                loadDependencies(loadProject, moveToml, deps, visitedDepIds)
-                projects.add(MoveProject(loadProject, rootPackage, deps))
-                true
-            }
-        }
-        println("projects ${projects.size}")
-        projects.forEach {
-            println("project ${it.contentRootPath}")
+        // org.move.psi.HandleDepend.actionPerformed
+        // var service = e.project?.serviceIfCreated<MoveProjectsService>()
+        // val project = service?.project
+        // project?.modules?.forEach { println("service project ${it.name}") }
+        // val cpath = toCanonicalName("C:\\Users\\15061\\Documents\\sun\\test\\stacoin")
+        // val cpath = toCanonicalName("../../test/stacoin")
 
-        }
-        for(item in projects) {
-            val mp = item.movePackages()
-
-            val elementAt = mp.elementAt(0)
-            elementAt.moveToml.addresses.forEach {
-                println("address key: ${it.key}, value: ${it.value}")
-            }
-            val deps = elementAt.moveToml.deps
-            println(
-                "dep " +
-                        " size ${deps.size}"
-            )
-        }
+        val cpath = toCanonicalName("C:\\Users\\15061\\Documents\\sun\\code\\my-counter\\stacoin")
+        ProjectManager.getInstanceIfCreated()
+        extracted2(cpath)
 
         // com.intellij.openapi.project.ex.ProjectManagerEx.loadProject(cpath)
         // val createProject = ProjectManagerEx.getInstanceIfCreated()
@@ -203,6 +157,7 @@ class HandleDepend : AnAction() {
         // }
     }
 
+
     // private fun toCanonicalName(filePath: String): Path {
     //     val file = Paths.get(filePath)
     //     try {
@@ -266,4 +221,129 @@ class HandleDepend : AnAction() {
     //     )
 }
 
+fun extracted(cpath: Path): MoveProject {
+    val loadProject = ProjectManagerEx.getInstanceEx().loadProject(cpath)
+    println(loadProject.basePath)
+    println(loadProject.workspaceFile?.path)
+    println(loadProject.isTrusted())
+    loadProject.wrapWithList().forEach {
+        println(it.name)
+    }
+    // loadProject.basePath
+    println("daxiao ${loadProject.modules.size}")
+    println("module:${loadProject.modules.toList()}")
+    println("loadProject before ${loadProject.basePath}")
+    val contentRoots = loadProject.modules.toList().asSequence()
+        .flatMap { ModuleRootManager.getInstance(it).contentRoots.asSequence() }
+    println("contentRoots ${contentRoots.count()}")
+    val projects = mutableListOf<MoveProject>()
+    for (contentRoot in contentRoots) {
+        println(
+            "contentRoot item" +
+                    " ${contentRoot.path}"
+        )
+        contentRoot.iterateFiles({ it.name == Consts.MANIFEST_FILE }) {
+            val rawDepQueue = ArrayDeque<Pair<TomlDependency, RawAddressMap>>()
+            val root = it.parent?.toNioPathOrNull() ?: return@iterateFiles true
+            val tomlFile = it.toTomlFile(loadProject) ?: return@iterateFiles true
+            val moveToml = MoveToml.fromTomlFile(tomlFile, root)
+            rawDepQueue.addAll(moveToml.deps)
+            val rootPackage = MovePackage.fromMoveToml(moveToml) ?: return@iterateFiles true
+            val deps = mutableListOf<Pair<MovePackage, RawAddressMap>>()
+            val visitedDepIds = mutableSetOf(
+                DepId(rootPackage.contentRoot.path, null)
+            )
+            loadDependencies(loadProject, moveToml, deps, visitedDepIds)
+            projects.add(MoveProject(loadProject, rootPackage, deps))
+            true
+        }
+    }
+    return projects.first()
+    // println("projects ${projects.size}")
+    // projects.forEach {
+    //     println("project ${it.contentRootPath}")
+    //
+    // }
+    // for (item in projects) {
+    //     val mp = item.movePackages()
+    //
+    //     val elementAt = mp.elementAt(0)
+    //     elementAt.moveToml.addresses.forEach {
+    //         println("address key: ${it.key}, value: ${it.value}")
+    //     }
+    //     val deps = elementAt.moveToml.deps
+    //     println(
+    //         "dep " +
+    //                 " size ${deps.size}"
+    //     )
+    // }
+}
+
+fun extracted2(cpath: Path) {
+    val loadProject = ProjectManagerEx.getInstanceEx().loadProject(cpath)
+    val mg = ModuleManager.getInstance(loadProject)
+    // val loadModuleSS = mg.loadModule(cpath.toString())
+    // println("modules is null ? ${loadModuleSS}")
+    println("ppppppp")
+    println(loadProject.basePath)
+    println(loadProject.workspaceFile?.path)
+    println(loadProject.isTrusted())
+    loadProject.wrapWithList().forEach {
+        println(it.name)
+    }
+    // loadProject.basePath
+    // loadProject.basePath
+    println("daxiao ${loadProject.modules.size}")
+    println("module:${loadProject.modules.toList()}")
+    loadProject.modules.forEach {
+        println("module ${it.name}")
+        println("java class  ${it.javaClass}")
+    }
+    println("loadProject before ${loadProject.basePath}")
+    val contentRoots = loadProject.modules.toList().asSequence()
+        .flatMap { ModuleRootManager.getInstance(it).contentRoots.asSequence() }
+    println("contentRoots ${contentRoots.count()}")
+    val projects = mutableListOf<MoveProject>()
+    for (contentRoot in contentRoots) {
+        println(
+            "contentRoot item" +
+                    " ${contentRoot.path}"
+        )
+        contentRoot.iterateFiles({ it.name == Consts.MANIFEST_FILE }) {
+            val rawDepQueue = ArrayDeque<Pair<TomlDependency, RawAddressMap>>()
+            val root = it.parent?.toNioPathOrNull() ?: return@iterateFiles true
+            val tomlFile = it.toTomlFile(loadProject) ?: return@iterateFiles true
+            val moveToml = MoveToml.fromTomlFile(tomlFile, root)
+            rawDepQueue.addAll(moveToml.deps)
+            val rootPackage = MovePackage.fromMoveToml(moveToml) ?: return@iterateFiles true
+            val deps = mutableListOf<Pair<MovePackage, RawAddressMap>>()
+            val visitedDepIds = mutableSetOf(
+                DepId(rootPackage.contentRoot.path, null)
+            )
+            loadDependencies(loadProject, moveToml, deps, visitedDepIds)
+            projects.add(MoveProject(loadProject, rootPackage, deps))
+            true
+        }
+    }
+
+    println("projects ${projects.size}")
+    projects.forEach {
+        println("project ${it.contentRootPath}")
+
+    }
+    for (item in projects) {
+        val mp = item.movePackages()
+
+        val elementAt = mp.elementAt(0)
+        elementAt.moveToml.addresses.forEach {
+            println("address key: ${it.key}, value: ${it.value}")
+        }
+        val deps = elementAt.moveToml.deps
+        println(
+            "dep " +
+                    " size ${deps.size}"
+        )
+    }
+    println("enddd")
+}
 

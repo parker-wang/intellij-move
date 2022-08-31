@@ -89,31 +89,7 @@ class GraphForMvPackage {
 
     }
 
-    fun fromTdToMoveProject(td: TomlDependency): MoveProject {
-        val path = td.localPath()
-        val project = ProjectManagerEx.getInstanceEx().loadProject(path)
-        val contentRoots = project.modules.toList().asSequence()
-            .flatMap { ModuleRootManager.getInstance(it).contentRoots.asSequence() }
-        val projects = mutableListOf<MoveProject>()
-        for (contentRoot in contentRoots) {
-            contentRoot.iterateFiles({ it.name == Consts.MANIFEST_FILE }) {
-                val rawDepQueue = ArrayDeque<Pair<TomlDependency, RawAddressMap>>()
-                val root = it.parent?.toNioPathOrNull() ?: return@iterateFiles true
-                val tomlFile = it.toTomlFile(project) ?: return@iterateFiles true
-                val moveToml = MoveToml.fromTomlFile(tomlFile, root)
-                rawDepQueue.addAll(moveToml.deps)
-                val rootPackage = MovePackage.fromMoveToml(moveToml) ?: return@iterateFiles true
-                val deps = mutableListOf<Pair<MovePackage, RawAddressMap>>()
-                val visitedDepIds = mutableSetOf(
-                    DepId(rootPackage.contentRoot.path, null)
-                )
-                loadDependencies(project, moveToml, deps, visitedDepIds)
-                projects.add(MoveProject(project, rootPackage, deps))
-                true
-            }
-        }
-        return projects.first()
-    }
+
 
     fun fromTdTotoml(td: TomlDependency): MoveToml? {
         val path = td.localPath()

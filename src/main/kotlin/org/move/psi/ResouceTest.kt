@@ -12,6 +12,8 @@ import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.components.serviceIfCreated
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.project.ex.ProjectManagerEx
+import com.intellij.openapi.roots.ModuleRootManager
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.ui.dsl.builder.RightGap
@@ -22,14 +24,12 @@ import com.jetbrains.rd.util.string.printToString
 import com.jetbrains.rd.util.string.println
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
-import org.move.cli.Consts
-import org.move.cli.MoveProject
-import org.move.cli.MoveProjectsService
+import org.move.cli.*
 import org.move.cli.manifest.MoveToml
 import org.move.cli.manifest.TomlDependency
 import org.move.cli.runconfig.AptosCommandConfiguration
 import org.move.cli.runconfig.AptosCommandConfigurationType
-import org.move.lang.MoveFile
+import org.move.lang.*
 import org.move.lang.core.psi.MvElement
 import org.move.lang.core.psi.MvFunction
 import org.move.lang.core.psi.MvModule
@@ -37,12 +37,11 @@ import org.move.lang.core.psi.containingFunction
 import org.move.lang.core.psi.ext.allFunctions
 import org.move.lang.core.psi.ext.fqName
 import org.move.lang.core.psi.usages
-import org.move.lang.isMoveFile
-import org.move.lang.modules
-import org.move.lang.toMoveFile
+import org.move.openapiext.modules
 import org.move.openapiext.toPsiFile
 import org.move.openapiext.toVirtualFile
 import org.move.psi.FunUtil.Companion.findFunction
+import org.move.stdext.iterateFiles
 import org.move.stdext.toPath
 import org.toml.lang.psi.TomlFile
 import java.io.File
@@ -50,6 +49,7 @@ import java.nio.charset.Charset
 import java.nio.file.Path
 import java.util.*
 import javax.swing.JComponent
+import kotlin.collections.ArrayDeque
 
 
 class ResouceTest : AnAction() {
@@ -58,6 +58,9 @@ class ResouceTest : AnAction() {
     override fun actionPerformed(e: AnActionEvent) {
 
         val project = e.project
+        project?.modules?.forEach {
+            println("mm : ${it.name}")
+        }
 
         val runManager = RunManagerEx.getInstanceEx(project!!)
 
@@ -86,7 +89,7 @@ class ResouceTest : AnAction() {
             println(findMoveProject?.contentRootPath)
         }
         val moveProjects: List<MoveProject> = service?.allProjects ?: listOf()
-        println(moveProjects.size)
+
         var myDialogData = CurrentResult.dialogData("")
         var dialog = CurrentResult(myDialogData)
         dialog.show()
@@ -97,7 +100,7 @@ class ResouceTest : AnAction() {
         // 如果json没有，那就从toml开始解析
         var mvpackages = mutableListOf<TomlDependency>()
         if (!boolean) {
-            val finalMoveProjects= mutableListOf<MoveProject>()
+            val finalMoveProjects = mutableListOf<MoveProject>()
             moveProjects.forEach { it ->
                 it.movePackages().elementAt(0).moveToml.deps.forEach {
                     mvpackages.add(it.first)
@@ -109,9 +112,20 @@ class ResouceTest : AnAction() {
                 val gmp = GraphForMvPackage()
                 gmp.buildGraph(moveToml, it.project.name, mpmap)
                 val gerResult = gmp.gerResult(mpmap)
+                val keys = mpmap.keys.toTypedArray()
+                gerResult.forEach {
+                    mpmap[keys[it]]?.forEach { it2 ->
+                        val fromTdToMoveProject = extracted(it2.localPath())
+                        if (fromTdToMoveProject != null)
+                            finalMoveProjects.add(fromTdToMoveProject)
+                    }
+                }
 
 
-
+            }
+            println("finalMoveProjects.size:${finalMoveProjects.size}")
+            finalMoveProjects.forEach {
+                process(it, Path.of(jsonpath))
             }
 
 
@@ -260,6 +274,37 @@ class ResouceTest : AnAction() {
 //         }
 
 
+    }
+
+    fun fromTdToMoveProject(td: TomlDependency): MoveProject {
+        val path = toCanonicalName(td.localPath().toString())
+        val project = ProjectManagerEx.getInstanceEx().loadProject(path)
+        println(" project basepath ${project.basePath}")
+        val asSequence = project.modules.toList().asSequence()
+        println("asSequence ${asSequence.count()}")
+
+        val contentRoots = project.modules.toList().asSequence()
+            .flatMap { ModuleRootManager.getInstance(it).contentRoots.asSequence() }
+        println("contentRoots first:${contentRoots.first()}")
+        val projects = mutableListOf<MoveProject>()
+        for (contentRoot in contentRoots) {
+            contentRoot.iterateFiles({ it.name == Consts.MANIFEST_FILE }) {
+                val rawDepQueue = ArrayDeque<Pair<TomlDependency, RawAddressMap>>()
+                val root = it.parent?.toNioPathOrNull() ?: return@iterateFiles true
+                val tomlFile = it.toTomlFile(project) ?: return@iterateFiles true
+                val moveToml = MoveToml.fromTomlFile(tomlFile, root)
+                rawDepQueue.addAll(moveToml.deps)
+                val rootPackage = MovePackage.fromMoveToml(moveToml) ?: return@iterateFiles true
+                val deps = mutableListOf<Pair<MovePackage, RawAddressMap>>()
+                val visitedDepIds = mutableSetOf(
+                    DepId(rootPackage.contentRoot.path, null)
+                )
+                loadDependencies(project, moveToml, deps, visitedDepIds)
+                projects.add(MoveProject(project, rootPackage, deps))
+                true
+            }
+        }
+        return projects.first()
     }
 
     private fun process(mp: MoveProject, path: Path) {
